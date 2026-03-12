@@ -1,28 +1,28 @@
-# NormalForm — Database Normalization Tool
+# AutoNorm — Automated Database Normalization System
 
-A full-stack tool that takes a relational schema (attributes + FDs) and produces a step-by-step normalization report up to BCNF.
+A full-stack tool that takes a relational schema (attributes + FDs) and produces a step-by-step, visual normalization report up to BCNF.
 
 ---
 
 ## Project Structure
 
 ```
-project/
+DBMS_assignment/
 ├── backend/
 │   ├── main.py           # FastAPI routes + CORS
 │   ├── models.py         # Pydantic request/response schemas
 │   ├── logic.py          # Core normalization engine (Normalizer class)
 │   └── requirements.txt
-└── frontend/
-    ├── public/
-    │   └── index.html
-    ├── src/
-    │   ├── App.js                          # Root state management + API call
-    │   ├── App.css                         # Global styles
-    │   └── components/
-    │       ├── SchemaInput.js              # Attribute + FD form
-    │       └── ResultsDisplay.js          # Tabbed results (Keys, 2NF, 3NF, BCNF)
-    └── package.json
+├── public/
+│   └── index.html
+├── src/
+│   ├── App.js                          # Root state management + API call
+│   ├── App.css                         # Global styles, themes, typography
+│   └── components/
+│       ├── SchemaInput.js              # Attribute + FD form
+│       └── ResultsDisplay.js           # Tabbed results (Keys, 2NF, 3NF, BCNF)
+├── package.json
+└── readme.md
 ```
 
 ---
@@ -32,7 +32,7 @@ project/
 ```bash
 cd backend
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 API will be live at: http://localhost:8000  
@@ -58,7 +58,7 @@ Request body:
 ## Frontend Setup
 
 ```bash
-cd frontend
+cd DBMS_assignment
 npm install
 npm start
 ```
@@ -66,19 +66,18 @@ npm start
 App will be live at: http://localhost:3000
 
 > **Note:** The frontend expects the backend at `http://localhost:8000`.  
-> To change this, set `REACT_APP_API_URL` in a `.env` file in the `frontend/` directory.
+> To change this, set `REACT_APP_API_URL` in a `.env` file in the project root (same folder as `package.json`).
 
 ---
 
 ## Features
 
-- **Candidate Key Detection** — finds ALL minimal candidate keys using attribute closure
+- **Candidate Key Detection** — finds **all** minimal candidate keys using attribute closure
 - **Prime/Non-Prime Classification** — identifies prime attributes automatically  
-- **2NF Analysis** — detects all partial dependencies with explanations
-- **3NF Analysis** — detects all transitive dependencies
-- **BCNF Analysis** — detects all BCNF violations
-- **Decomposition** — shows resulting normalized table schemas for each normal form
-- **Dynamic UI** — add/remove attributes and FDs with live validation
+- **2NF / 3NF / BCNF Analysis** — detects partial, transitive, and BCNF violations with explanations
+- **Step-by-Step Decomposition** — shows resulting normalized table schemas for each normal form
+- **Interactive UI** — add/remove attributes and FDs with live validation
+- **Dark / Light Themes & Fonts** — switch between dark/light mode and multiple font styles directly from the header
 
 ---
 
