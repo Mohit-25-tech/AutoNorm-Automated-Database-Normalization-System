@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 
 const TABS = [
-  { id: "keys", label: "Candidate Keys", icon: "🔑" },
-  { id: "2nf", label: "2NF", icon: "②" },
-  { id: "3nf", label: "3NF", icon: "③" },
+  { id: "1nf",  label: "1NF",  icon: "①" },
+  { id: "keys", label: "Keys", icon: "🔑" },
+  { id: "2nf",  label: "2NF",  icon: "②" },
+  { id: "3nf",  label: "3NF",  icon: "③" },
   { id: "bcnf", label: "BCNF", icon: "◈" },
 ];
 
@@ -40,18 +41,68 @@ function ViolationCard({ v }) {
   return (
     <div className="violation-card">
       <div className="violation-type">{v.type}</div>
-      <div className="violation-fd">{v.fd}</div>
+      <div className="violation-fd">{v.fd || v.attribute}</div>
       <div className="violation-reason">{v.reason}</div>
     </div>
   );
 }
 
-export default function ResultsDisplay({ data }) {
-  const [activeTab, setActiveTab] = useState("keys");
+function StepList({ steps }) {
+  const [open, setOpen] = useState(null);
+  if (!steps || steps.length === 0) return null;
+  return (
+    <div className="step-list">
+      {steps.map((s, i) => (
+        <div
+          key={i}
+          className={`step-item ${open === i ? "step-open" : ""}`}
+          onClick={() => setOpen(open === i ? null : i)}
+        >
+          <div className="step-header">
+            <span className="step-num">{i + 1}</span>
+            <span className="step-title">{s.title}</span>
+            <span className="step-chevron">{open === i ? "▲" : "▼"}</span>
+          </div>
+          {open === i && (
+            <div className="step-detail">{s.detail}</div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function ResultsDisplay({ data, onReset }) {
+  const [activeTab, setActiveTab] = useState("1nf");
 
   if (!data) return null;
 
+  const allAttrs = data.tables_bcnf.flatMap((t) => t.attributes);
+  const uniqueAttrs = [...new Set(allAttrs)];
+  const nonPrime = uniqueAttrs.filter((a) => !data.prime_attributes.includes(a));
+
   const tabContent = {
+    "1nf": (
+      <div className="tab-content">
+        <div className="nf-header">
+          <div>
+            <h3 className="block-title">First Normal Form (1NF)</h3>
+            <p className="nf-desc">Every attribute must hold a single atomic value. No repeating groups or multi-valued columns.</p>
+          </div>
+          <StatusBadge ok={data.is_1nf} />
+        </div>
+        {!data.is_1nf && (
+          <div className="result-block">
+            <h4 className="sub-title">Violations Found</h4>
+            {data.violations_1nf.map((v, i) => <ViolationCard key={i} v={v} />)}
+          </div>
+        )}
+        <div className="result-block">
+          <h4 className="sub-title">Step-by-Step Reasoning</h4>
+          <StepList steps={data.steps_1nf} />
+        </div>
+      </div>
+    ),
     keys: (
       <div className="tab-content">
         <div className="result-block">
@@ -84,18 +135,16 @@ export default function ResultsDisplay({ data }) {
         <div className="result-block">
           <h3 className="block-title">Non-Prime Attributes</h3>
           <div className="attr-pills-row">
-            {data.candidate_keys.length > 0 &&
-              (() => {
-                const allAttrs = data.tables_bcnf.flatMap((t) => t.attributes);
-                const unique = [...new Set(allAttrs)];
-                const nonPrime = unique.filter((a) => !data.prime_attributes.includes(a));
-                return nonPrime.length === 0 ? (
-                  <span className="empty-note">None</span>
-                ) : (
-                  nonPrime.map((a) => <span key={a} className="attr-pill">{a}</span>)
-                );
-              })()}
+            {nonPrime.length === 0 ? (
+              <span className="empty-note">None</span>
+            ) : (
+              nonPrime.map((a) => <span key={a} className="attr-pill">{a}</span>)
+            )}
           </div>
+        </div>
+        <div className="result-block">
+          <h4 className="sub-title">Step-by-Step Reasoning</h4>
+          <StepList steps={data.steps_keys} />
         </div>
       </div>
     ),
@@ -118,6 +167,10 @@ export default function ResultsDisplay({ data }) {
           <h4 className="sub-title">Resulting Tables</h4>
           {data.tables_2nf.map((t, i) => <TableCard key={i} table={t} />)}
         </div>
+        <div className="result-block">
+          <h4 className="sub-title">Step-by-Step Reasoning</h4>
+          <StepList steps={data.steps_2nf} />
+        </div>
       </div>
     ),
     "3nf": (
@@ -138,6 +191,10 @@ export default function ResultsDisplay({ data }) {
         <div className="result-block">
           <h4 className="sub-title">Resulting Tables</h4>
           {data.tables_3nf.map((t, i) => <TableCard key={i} table={t} />)}
+        </div>
+        <div className="result-block">
+          <h4 className="sub-title">Step-by-Step Reasoning</h4>
+          <StepList steps={data.steps_3nf} />
         </div>
       </div>
     ),
@@ -160,6 +217,10 @@ export default function ResultsDisplay({ data }) {
           <h4 className="sub-title">Resulting Tables</h4>
           {data.tables_bcnf.map((t, i) => <TableCard key={i} table={t} />)}
         </div>
+        <div className="result-block">
+          <h4 className="sub-title">Step-by-Step Reasoning</h4>
+          <StepList steps={data.steps_bcnf} />
+        </div>
       </div>
     ),
   };
@@ -169,7 +230,7 @@ export default function ResultsDisplay({ data }) {
       <div className="results-header">
         <h2 className="results-title">Normalization Results</h2>
         <div className="nf-status-row">
-          {["2NF", "3NF", "BCNF"].map((nf) => (
+          {["1NF", "2NF", "3NF", "BCNF"].map((nf) => (
             <div key={nf} className={`nf-pill ${data[`is_${nf.toLowerCase()}`] ? "nf-ok" : "nf-fail"}`}>
               {nf} {data[`is_${nf.toLowerCase()}`] ? "✓" : "✗"}
             </div>
@@ -191,6 +252,14 @@ export default function ResultsDisplay({ data }) {
       </div>
 
       <div className="tab-panel">{tabContent[activeTab]}</div>
+
+      {typeof onReset === "function" && (
+        <div className="results-footer">
+          <button type="button" className="btn-reset-page" onClick={onReset}>
+            Reset — new schema
+          </button>
+        </div>
+      )}
     </div>
   );
 }

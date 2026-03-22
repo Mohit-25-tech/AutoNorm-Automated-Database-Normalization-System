@@ -86,6 +86,16 @@ body {
   align-items: center;
   gap: 1rem;
 }
+.header-left-compact {
+  gap: 0.65rem;
+}
+.header-brand-short {
+  font-family: var(--mono);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
 .logo-mark {
   font-size: 2.2rem;
   color: var(--accent);
@@ -167,14 +177,34 @@ body {
   margin: 0 auto;
   padding: 2rem;
 }
-.layout {
-  display: grid;
-  grid-template-columns: 420px 1fr;
+
+.page-input,
+.page-results {
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
-  align-items: start;
 }
-@media (max-width: 900px) {
-  .layout { grid-template-columns: 1fr; }
+
+.page-input {
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.page-results {
+  width: 100%;
+}
+
+.input-hero {
+  text-align: center;
+  padding: 0.25rem 0 0.5rem;
+}
+.page-title {
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+}
+.page-subtitle {
+  font-size: 0.85rem;
+  margin-top: 0.35rem;
 }
 
 /* ─── Panels ─── */
@@ -184,7 +214,18 @@ body {
   border-radius: 12px;
   overflow: hidden;
 }
-.panel-left { position: sticky; top: 2rem; }
+.panel-full {
+  width: 100%;
+}
+.panel-results {
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.api-error-inline {
+  margin: 1.25rem 1.5rem 0;
+}
 
 /* ─── Schema Input ─── */
 .schema-input { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
@@ -411,6 +452,31 @@ body {
 /* ─── Results Display ─── */
 .results-display { display: flex; flex-direction: column; }
 
+.results-footer {
+  padding: 1.25rem 1.5rem 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+}
+.btn-reset-page {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 0.75rem 1.75rem;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.btn-reset-page:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0, 229, 192, 0.06);
+}
+
 .results-header {
   padding: 1.25rem 1.5rem 1rem;
   border-bottom: 1px solid var(--border);
@@ -615,3 +681,86 @@ body {
 }
 
 .empty-note { color: var(--text3); font-size: 0.82rem; font-style: italic; }
+
+/* ─── 1NF checkbox ─── */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+  padding: 6px 0;
+}
+.checkbox-input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.chip-warn {
+  background: rgba(245, 166, 35, 0.15);
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+/* ─── Step list ─── */
+.step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.step-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.step-item:hover {
+  border-color: var(--accent);
+}
+.step-item.step-open {
+  border-color: var(--accent2);
+}
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+}
+.step-num {
+  background: var(--surface3);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.step-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.step-chevron {
+  font-size: 10px;
+  color: var(--text3);
+}
+.step-detail {
+  padding: 0 14px 12px 46px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.65;
+  border-top: 1px solid var(--border);
+  margin-top: 0;
+  padding-top: 10px;
+}

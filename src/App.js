@@ -3,7 +3,7 @@ import SchemaInput from "./components/SchemaInput";
 import ResultsDisplay from "./components/ResultsDisplay";
 import "./App.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+const API_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
 
 export default function App() {
   const [results, setResults] = useState(null);
@@ -11,6 +11,10 @@ export default function App() {
   const [apiError, setApiError] = useState("");
   const [theme, setTheme] = useState("dark");
   const [fontStyle, setFontStyle] = useState("modern");
+  /** 'input' = schema form; 'results' = normalization output */
+  const [page, setPage] = useState("input");
+  /** Increment to remount SchemaInput and clear its internal state on reset */
+  const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -36,6 +40,7 @@ export default function App() {
       }
       const data = await res.json();
       setResults(data);
+      setPage("results");
     } catch (e) {
       setApiError(e.message || "Failed to connect to backend.");
     } finally {
@@ -43,16 +48,20 @@ export default function App() {
     }
   };
 
+  const handleReset = () => {
+    setResults(null);
+    setApiError("");
+    setPage("input");
+    setFormKey((k) => k + 1);
+  };
+
   return (
     <div className="app">
       <header className="app-header">
         <div className="header-inner">
-          <div className="header-left">
+          <div className="header-left header-left-compact">
             <div className="logo-mark">⬡</div>
-            <div>
-              <h1 className="app-title">AutoNorm</h1>
-              <p className="app-subtitle">A Step-by-Step Relational Database Normalizer</p>
-            </div>
+            <span className="header-brand-short">AutoNorm</span>
           </div>
           <div className="header-controls">
             <div className="control-group">
@@ -91,26 +100,36 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        <div className="layout">
-          <div className="panel panel-left">
-            <SchemaInput onSubmit={handleNormalize} loading={loading} />
+        {page === "input" && (
+          <div className="page page-input">
+            <div className="input-hero">
+              <h1 className="app-title page-title">AutoNorm</h1>
+              <p className="app-subtitle page-subtitle">
+                A Step-by-Step Relational Database Normalizer
+              </p>
+            </div>
+            <div className="panel panel-full">
+              {apiError && (
+                <div className="api-error api-error-inline">
+                  <strong>Error:</strong> {apiError}
+                </div>
+              )}
+              <SchemaInput
+                key={formKey}
+                onSubmit={handleNormalize}
+                loading={loading}
+              />
+            </div>
           </div>
-          <div className="panel panel-right">
-            {apiError && (
-              <div className="api-error">
-                <strong>Error:</strong> {apiError}
-              </div>
-            )}
-            {!results && !apiError && (
-              <div className="empty-state">
-                <div className="empty-icon">◈</div>
-                <p className="empty-title">Ready to Normalize</p>
-                <p className="empty-desc">Define your schema on the left, then click "Normalize Schema" to see the step-by-step decomposition.</p>
-              </div>
-            )}
-            {results && <ResultsDisplay data={results} />}
+        )}
+
+        {page === "results" && results && (
+          <div className="page page-results">
+            <div className="panel panel-full panel-results">
+              <ResultsDisplay data={results} onReset={handleReset} />
+            </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );

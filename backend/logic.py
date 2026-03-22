@@ -1,12 +1,86 @@
 import itertools
 
 class Normalizer:
-    def __init__(self, attributes, fds):
+    def __init__(self, attributes, fds, multivalued_attributes=None, has_repeating_groups=False):
         self.attributes = set(attributes)
         self.fds = fds
+        self.multivalued_attributes = multivalued_attributes or []
+        self.has_repeating_groups = has_repeating_groups
         self.candidate_keys = []
         self.prime_attributes = set()
         self.find_candidate_keys()
+
+    # ─── 1NF ───────────────────────────────────────────────────────────────────
+
+    def check_1nf_violations(self):
+        violations = []
+        for attr in self.multivalued_attributes:
+            violations.append({
+                "type": "Multi-valued Attribute",
+                "attribute": attr,
+                "reason": f"'{attr}' can hold multiple values (e.g. a list), which violates atomicity."
+            })
+        if self.has_repeating_groups:
+            violations.append({
+                "type": "Repeating Group",
+                "attribute": "—",
+                "reason": "The schema contains repeating groups (e.g. numbered columns like Phone1, Phone2). Each fact should be stored in its own row."
+            })
+        return violations
+
+    def get_1nf_steps(self):
+        violations = self.check_1nf_violations()
+        steps = []
+        steps.append({
+            "title": "Identify atomic requirement",
+            "detail": (
+                "First Normal Form (1NF) requires every attribute to hold a single, indivisible "
+                "(atomic) value, and every row to be unique. There must be no repeating groups "
+                "or multi-valued columns."
+            )
+        })
+        if not violations:
+            steps.append({
+                "title": "Check: all attributes atomic?",
+                "detail": (
+                    f"All {len(self.attributes)} attribute(s) — {{{', '.join(sorted(self.attributes))}}} — "
+                    "appear to store atomic values. No repeating groups were reported."
+                )
+            })
+            steps.append({
+                "title": "Result: already in 1NF",
+                "detail": (
+                    "The relation satisfies 1NF. We can proceed to check higher normal forms."
+                )
+            })
+        else:
+            for v in violations:
+                if v["type"] == "Multi-valued Attribute":
+                    steps.append({
+                        "title": f"Violation: '{v['attribute']}' is multi-valued",
+                        "detail": (
+                            f"'{v['attribute']}' can contain multiple values in a single cell. "
+                            "Fix: create a separate row for each value, moving '{v['attribute']}' "
+                            "into a child relation keyed by the parent's primary key."
+                        )
+                    })
+                else:
+                    steps.append({
+                        "title": "Violation: repeating groups detected",
+                        "detail": (
+                            "Repeating groups (e.g. Phone1, Phone2, Phone3) encode the same "
+                            "fact multiple times as separate columns. Fix: replace them with a "
+                            "single attribute in a new relation, with one row per value."
+                        )
+                    })
+            steps.append({
+                "title": "Result: 1NF violations found",
+                "detail": (
+                    "Resolve the violations above before proceeding. Once every attribute is "
+                    "atomic and rows are unique, the relation is in 1NF."
+                )
+            })
+        return steps
 
     def get_closure(self, attribute_set, fds=None):
         if fds is None:
@@ -125,6 +199,231 @@ class Normalizer:
                         "rhs": sorted(list(actual_rhs))
                     })
         return violations
+
+    # ─── Step-by-step narratives ────────────────────────────────────────────────
+
+    def get_candidate_key_steps(self):
+        steps = []
+        if self.fds:
+            rhs_all = set().union(*(rhs for _, rhs in self.fds))
+        else:
+            rhs_all = set()
+        core = self.attributes - rhs_all
+        steps.append({
+            "title": "Identify core attributes",
+            "detail": (
+                f"Attributes that never appear on the RHS of any FD cannot be derived — "
+                f"they must be in every candidate key. "
+                f"Core attributes: {{{', '.join(sorted(core)) if core else 'empty set'}}}."
+            )
+        })
+        closure_core = self.get_closure(core)
+        steps.append({
+            "title": "Compute closure of core",
+            "detail": (
+                f"Closure {{{', '.join(sorted(core))}}}+ = "
+                f"{{{', '.join(sorted(closure_core))}}}. "
+                + ("The core alone determines all attributes — it is a candidate key." if closure_core == self.attributes
+                   else "The core alone does not determine all attributes; we must augment it with other attributes.")
+            )
+        })
+        if self.candidate_keys:
+            for i, ck in enumerate(self.candidate_keys):
+                closure = self.get_closure(ck)
+                steps.append({
+                    "title": f"Candidate key K{i+1}: {{{', '.join(sorted(ck))}}}",
+                    "detail": (
+                        f"Closure {{{', '.join(sorted(ck))}}}+ = {{{', '.join(sorted(closure))}}}. "
+                        f"This equals all attributes — it is a superkey. "
+                        f"No proper subset also determines all attributes, so it is minimal (a candidate key)."
+                    )
+                })
+        steps.append({
+            "title": "Identify prime vs non-prime attributes",
+            "detail": (
+                f"Prime attributes (appear in at least one candidate key): "
+                f"{{{', '.join(sorted(self.prime_attributes)) if self.prime_attributes else 'none'}}}. "
+                f"Non-prime attributes: "
+                f"{{{', '.join(sorted(self.attributes - self.prime_attributes)) if (self.attributes - self.prime_attributes) else 'none'}}}."
+            )
+        })
+        return steps
+
+    def get_2nf_steps(self):
+        violations = self.check_2nf_violations()
+        steps = []
+        steps.append({
+            "title": "2NF definition",
+            "detail": (
+                "A relation is in 2NF if it is in 1NF and every non-prime attribute is "
+                "fully functionally dependent on every candidate key (no partial dependencies allowed)."
+            )
+        })
+        steps.append({
+            "title": "Check each FD for partial dependency",
+            "detail": (
+                f"For each FD, check: is the LHS a proper subset of some candidate key AND does the RHS contain a non-prime attribute? "
+                f"Candidate keys: {[sorted(list(k)) for k in self.candidate_keys]}. "
+                f"Non-prime attributes: {sorted(self.attributes - self.prime_attributes)}."
+            )
+        })
+        if not violations:
+            steps.append({
+                "title": "Result: already in 2NF",
+                "detail": "No partial dependencies found. The relation is already in 2NF — proceed to check 3NF."
+            })
+        else:
+            for v in violations:
+                steps.append({
+                    "title": f"Partial dependency found: {v['fd']}",
+                    "detail": (
+                        f"{v['reason']}. "
+                        f"Non-prime attribute(s) {v['rhs']} are determined by only part of a candidate key."
+                    )
+                })
+            tables = self.decompose_to_2nf()
+            steps.append({
+                "title": "Decompose to remove partial dependencies",
+                "detail": (
+                    "For each partial dependency X -> Y (where X is a proper subset of a candidate key): "
+                    "create a new relation with attributes X union Y, with X as the primary key. "
+                    "Remove Y from the original relation."
+                )
+            })
+            for t in tables:
+                pk = t['primary_key']
+                attrs = t['attributes']
+                non_pk = [a for a in attrs if a not in pk]
+                steps.append({
+                    "title": f"Create {t['name']}({', '.join(attrs)})",
+                    "detail": (
+                        f"Primary key: {{{', '.join(pk)}}}. "
+                        + (f"Attributes {non_pk} are fully determined by {{{', '.join(pk)}}}."
+                           if non_pk else "This table captures the original candidate key.")
+                    )
+                })
+        return steps
+
+    def get_3nf_steps(self):
+        violations = self.check_3nf_violations()
+        steps = []
+        steps.append({
+            "title": "3NF definition",
+            "detail": (
+                "A relation is in 3NF if it is in 2NF and for every non-trivial FD X->Y, "
+                "either X is a superkey OR every attribute in Y is a prime attribute. "
+                "This eliminates transitive dependencies on non-prime attributes."
+            )
+        })
+        steps.append({
+            "title": "Check each FD for transitive dependency",
+            "detail": (
+                "For each FD where the LHS is NOT a superkey, check if the RHS contains any non-prime attribute. "
+                f"Superkeys are all supersets of: {[sorted(list(k)) for k in self.candidate_keys]}."
+            )
+        })
+        if not violations:
+            steps.append({
+                "title": "Result: already in 3NF",
+                "detail": "No transitive dependencies found. The relation is already in 3NF — proceed to check BCNF."
+            })
+        else:
+            for v in violations:
+                steps.append({
+                    "title": f"Transitive dependency found: {v['fd']}",
+                    "detail": (
+                        f"{v['reason']}. "
+                        f"Non-prime attribute(s) {v['rhs']} are transitively determined through a non-superkey LHS."
+                    )
+                })
+            steps.append({
+                "title": "Compute minimal cover (canonical cover)",
+                "detail": (
+                    "Step 1: Split every FD so each RHS has exactly one attribute. "
+                    "Step 2: Remove extraneous attributes from each LHS (try removing each attribute; if closure is unchanged, it is extraneous). "
+                    "Step 3: Remove redundant FDs (if the RHS is derivable from remaining FDs without this one, drop it). "
+                    "Step 4: Merge FDs with the same LHS."
+                )
+            })
+            tables = self.decompose_to_3nf()
+            steps.append({
+                "title": "Create one relation per FD group in minimal cover",
+                "detail": (
+                    "For each FD X->Y in the minimal cover, create a relation with attributes X union Y, with X as primary key. "
+                    "If no relation contains a candidate key, add one extra relation with just the candidate key attributes."
+                )
+            })
+            for t in tables:
+                pk = t['primary_key']
+                attrs = t['attributes']
+                non_pk = [a for a in attrs if a not in pk]
+                steps.append({
+                    "title": f"Create {t['name']}({', '.join(attrs)})",
+                    "detail": (
+                        f"Primary key: {{{', '.join(pk)}}}. "
+                        + (f"Attributes {non_pk} are fully and non-transitively determined by {{{', '.join(pk)}}}."
+                           if non_pk else "This relation preserves the candidate key.")
+                    )
+                })
+        return steps
+
+    def get_bcnf_steps(self):
+        violations = self.check_bcnf_violations()
+        steps = []
+        steps.append({
+            "title": "BCNF definition",
+            "detail": (
+                "A relation is in BCNF (Boyce-Codd Normal Form) if for every non-trivial FD X->Y, "
+                "X is a superkey. BCNF is stricter than 3NF — it guarantees no redundancy from FDs, "
+                "but lossless decomposition may not always preserve every FD."
+            )
+        })
+        steps.append({
+            "title": "Check every non-trivial FD: is LHS a superkey?",
+            "detail": (
+                "A non-trivial FD is one where the RHS is not a subset of the LHS. "
+                "For each such FD, the LHS must determine all attributes. "
+                f"Candidate keys: {[sorted(list(k)) for k in self.candidate_keys]}."
+            )
+        })
+        if not violations:
+            steps.append({
+                "title": "Result: already in BCNF",
+                "detail": "Every non-trivial FD has a superkey on its LHS. The relation is in BCNF."
+            })
+        else:
+            for v in violations:
+                steps.append({
+                    "title": f"BCNF violation: {v['fd']}",
+                    "detail": (
+                        f"{v['reason']}. Because {v['lhs']} is not a superkey but functionally determines "
+                        f"{v['rhs']}, this FD causes redundancy and must be eliminated by decomposition."
+                    )
+                })
+            steps.append({
+                "title": "Apply recursive lossless decomposition",
+                "detail": (
+                    "For the violating FD X->Y: compute closure(X). "
+                    "Split into R1 = closure(X) and R2 = X union (all_attributes minus closure(X)). "
+                    "R1 and R2 join losslessly on X (since X is a key in R1). "
+                    "Repeat on each sub-relation until all satisfy BCNF."
+                )
+            })
+            tables = self.decompose_to_bcnf()
+            for t in tables:
+                pk = t['primary_key']
+                attrs = t['attributes']
+                non_pk = [a for a in attrs if a not in pk]
+                steps.append({
+                    "title": f"Result {t['name']}({', '.join(attrs)})",
+                    "detail": (
+                        f"Primary key: {{{', '.join(pk)}}}. "
+                        + (f"All FDs within this sub-relation have {{{', '.join(pk)}}} as superkey. "
+                           f"Attributes {non_pk} are fully determined by the key."
+                           if non_pk else "This sub-relation contains only key attributes.")
+                    )
+                })
+        return steps
 
     def decompose_to_2nf(self):
         violations = self.check_2nf_violations()

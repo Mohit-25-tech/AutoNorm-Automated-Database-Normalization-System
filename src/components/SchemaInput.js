@@ -4,6 +4,9 @@ export default function SchemaInput({ onSubmit, loading }) {
   const [attrInput, setAttrInput] = useState("");
   const [attributes, setAttributes] = useState([]);
   const [fds, setFds] = useState([{ lhs: "", rhs: "" }]);
+  const [mvInput, setMvInput] = useState("");
+  const [multivaluedAttrs, setMultivaluedAttrs] = useState([]);
+  const [hasRepeatingGroups, setHasRepeatingGroups] = useState(false);
   const [error, setError] = useState("");
 
   const addAttribute = () => {
@@ -20,11 +23,30 @@ export default function SchemaInput({ onSubmit, loading }) {
 
   const removeAttribute = (attr) => {
     setAttributes(attributes.filter((a) => a !== attr));
+    setMultivaluedAttrs(multivaluedAttrs.filter((a) => a !== attr));
   };
 
   const handleAttrKeyDown = (e) => {
     if (e.key === "Enter") { e.preventDefault(); addAttribute(); }
   };
+
+  const addMvAttr = () => {
+    const trimmed = mvInput.trim().toUpperCase();
+    if (!trimmed) return;
+    if (!attributes.includes(trimmed)) {
+      setError(`"${trimmed}" is not in your schema. Add it as an attribute first.`);
+      return;
+    }
+    if (multivaluedAttrs.includes(trimmed)) {
+      setError(`"${trimmed}" is already marked as multi-valued.`);
+      return;
+    }
+    setMultivaluedAttrs([...multivaluedAttrs, trimmed]);
+    setMvInput("");
+    setError("");
+  };
+
+  const removeMvAttr = (attr) => setMultivaluedAttrs(multivaluedAttrs.filter((a) => a !== attr));
 
   const updateFd = (index, field, value) => {
     const updated = [...fds];
@@ -33,7 +55,6 @@ export default function SchemaInput({ onSubmit, loading }) {
   };
 
   const addFd = () => setFds([...fds, { lhs: "", rhs: "" }]);
-
   const removeFd = (index) => setFds(fds.filter((_, i) => i !== index));
 
   const parseFdSide = (str) =>
@@ -65,11 +86,14 @@ export default function SchemaInput({ onSubmit, loading }) {
         lhs: parseFdSide(fd.lhs),
         rhs: parseFdSide(fd.rhs),
       })),
+      multivalued_attributes: multivaluedAttrs,
+      has_repeating_groups: hasRepeatingGroups,
     });
   };
 
   return (
     <div className="schema-input">
+      {/* Step 01 — Attributes */}
       <section className="input-section">
         <h2 className="section-title">
           <span className="step-badge">01</span>
@@ -99,12 +123,55 @@ export default function SchemaInput({ onSubmit, loading }) {
         </div>
       </section>
 
+      {/* Step 02 — 1NF options */}
       <section className="input-section">
         <h2 className="section-title">
           <span className="step-badge">02</span>
+          1NF — Atomicity Check
+        </h2>
+        <p className="hint-text">Optionally flag attributes that violate First Normal Form.</p>
+
+        <div className="attr-input-row" style={{ marginBottom: "8px" }}>
+          <input
+            className="text-input"
+            type="text"
+            placeholder="Multi-valued attribute (e.g. PHONE)"
+            value={mvInput}
+            onChange={(e) => setMvInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMvAttr(); } }}
+          />
+          <button className="btn-add" onClick={addMvAttr}>Flag</button>
+        </div>
+        <div className="attr-chips" style={{ marginBottom: "10px" }}>
+          {multivaluedAttrs.length === 0 && (
+            <span className="placeholder-text">No multi-valued attributes flagged</span>
+          )}
+          {multivaluedAttrs.map((attr) => (
+            <span key={attr} className="chip chip-warn">
+              {attr}
+              <button className="chip-remove" onClick={() => removeMvAttr(attr)}>×</button>
+            </span>
+          ))}
+        </div>
+
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={hasRepeatingGroups}
+            onChange={(e) => setHasRepeatingGroups(e.target.checked)}
+            className="checkbox-input"
+          />
+          <span>This schema has repeating groups (e.g. Phone1, Phone2...)</span>
+        </label>
+      </section>
+
+      {/* Step 03 — FDs */}
+      <section className="input-section">
+        <h2 className="section-title">
+          <span className="step-badge">03</span>
           Functional Dependencies
         </h2>
-        <p className="hint-text">Use comma-separated attribute names. e.g. LHS: <code>A, B</code> → RHS: <code>C</code></p>
+        <p className="hint-text">Comma-separated attribute names. e.g. LHS: <code>A, B</code> → RHS: <code>C</code></p>
         <div className="fd-list">
           {fds.map((fd, i) => (
             <div key={i} className="fd-row">
