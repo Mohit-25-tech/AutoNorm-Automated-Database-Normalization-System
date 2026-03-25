@@ -764,3 +764,20 @@ body {
   margin-top: 0;
   padding-top: 10px;
 }
+
+/* ─── Mobile Responsive ─── */
+@media (max-width: 480px) {
+  .app-header { padding: 0 1rem; }
+  .header-inner { flex-direction: column; align-items: flex-start; gap: 0.5rem; padding: 0.8rem 0; }
+  .header-controls { width: 100%; justify-content: flex-start; gap: 0.6rem; }
+  .app-main { padding: 1rem; }
+  .page-title { font-size: 1.5rem; }
+  .schema-input { padding: 1rem; gap: 1rem; }
+  .fd-row { flex-wrap: wrap; }
+  .fd-row .text-input { min-width: 0; flex: 1 1 100px; }
+  .tab-btn { padding: 0.65rem 0.8rem; font-size: 0.75rem; }
+  .tab-panel { padding: 1rem; }
+  .step-detail { padding: 0 10px 10px 36px; }
+  .results-header { padding: 1rem; flex-direction: column; align-items: flex-start; }
+  .nf-status-row { flex-wrap: wrap; }
+}
