@@ -2,6 +2,15 @@
 
 A full-stack web application that accepts a relational schema and functional dependencies and produces a complete, step-by-step normalization walkthrough from 1NF through BCNF.
 
+### 🔗 Live Demo
+
+| | URL |
+|---|---|
+| **🌐 App** | [https://auto-norm-automated-database-normal.vercel.app](https://auto-norm-automated-database-normal.vercel.app) |
+| **⚙️ API** | [https://autonorm-automated-database.onrender.com](https://autonorm-automated-database.onrender.com) |
+
+> **Note**: The backend is hosted on Render's free tier and may take ~30 seconds to wake up on the first request after inactivity.
+
 ---
 
 ## Features
